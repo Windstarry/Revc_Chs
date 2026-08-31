@@ -2106,7 +2106,9 @@ void CTheScripts::RenderTheScriptDebugLines()
 void CTheScripts::SaveAllScripts(uint8* buf, uint32* size)
 {
 	// 禁用cleo脚本，防止在保存过程中有脚本被创建或销毁
+#ifdef VC_CLEO
 	DisableCLEOScripts();
+#endif // VC_CLEO
 
 	INITSAVEBUF
 	uint32 varSpace = GetSizeOfVariableSpace();
@@ -2183,9 +2185,11 @@ void CTheScripts::SaveAllScripts(uint8* buf, uint32* size)
 	WriteSaveBuf(buf, runningScripts);
 	for (CRunningScript* pScript = pActiveScripts; pScript; pScript = pScript->GetNext())
 		pScript->Save(buf);
-VALIDATESAVEBUF(*size)
+	VALIDATESAVEBUF(*size)
 	// 启用cleo脚本
+#ifdef VC_CLEO
 	EnableCLEOScripts();
+#endif // VC_CLEO
 }
 
 void CTheScripts::LoadAllScripts(uint8* buf, uint32 size)

@@ -63,7 +63,11 @@ int _caserename(const char *old_filename, const char *new_filename);
 #ifdef RW_GL3
 typedef struct
 {
+#ifdef LIBRW_SDL2
+    struct SDL_Window* window; // SDL2 gfxlib: GLFW 头未引入，用前向声明避免 'GLFWwindow' 未声明
+#else
     GLFWwindow* window;
+#endif
     RwBool		fullScreen;
     RwV2d		lastMousePos;
     double      mouseWheel; // glfw doesn't cache it

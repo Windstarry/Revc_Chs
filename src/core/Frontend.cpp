@@ -2,6 +2,9 @@
 #define WITHWINDOWS
 #define WITHDINPUT
 #include "common.h"
+#ifdef LIBRW_SDL2
+#include <SDL.h>
+#endif
 #ifndef PS2_MENU
 #include "crossplatform.h"
 #include "platform.h"
@@ -635,7 +638,11 @@ CMenuManager::CentreMousePointer()
 		ClientToScreen(PSGLOBAL(window), &Point);
 		SetCursorPos(Point.x, Point.y);
 #elif defined RW_GL3
+#ifdef LIBRW_SDL2
+		SDL_WarpMouseInWindow(PSGLOBAL(window), SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+#else
 		glfwSetCursorPos(PSGLOBAL(window), SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+#endif
 #endif
 
 		PSGLOBAL(lastMousePos.x) = SCREEN_WIDTH / 2;
@@ -4960,8 +4967,10 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 						PSGLOBAL(joy1)->GetCapabilities(&devCaps);
 						ControlsManager.InitDefaultControlConfigJoyPad(devCaps.dwButtons);
 					}
+#elif defined(LIBRW_SDL2)
+				/* SDL2: gamepad enumerated via SDL controller events */
 #else
-					if (PSGLOBAL(joy1id) != -1 && glfwJoystickPresent(PSGLOBAL(joy1id))) {
+				if (PSGLOBAL(joy1id) != -1 && glfwJoystickPresent(PSGLOBAL(joy1id))) {
 						int count;
 						glfwGetJoystickButtons(PSGLOBAL(joy1id), &count);
 						ControlsManager.InitDefaultControlConfigJoyPad(count);

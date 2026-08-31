@@ -42,7 +42,6 @@
 #include <fstream>
 #include <map>
 #include <memory>
-#include <ranges>
 #include <string>
 #include <vector>
 // 编码转换函数声明
@@ -371,7 +370,9 @@ void CTheScripts::EnableCLEOScripts()
 }
 
 
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 // 脚本op命令执行
 int8
@@ -413,7 +414,11 @@ CRunningScript::ProcessCleoScripts(int32 command)
 	case COMMAND_CLEO_MEMORY_READ_2:
 		char buffer[256];
 		sprintf(buffer, "该脚本使用了读写内存的指令，无法使用 脚本名:%s", m_bScriptFileName);
+#ifdef _WIN32
 		MessageBoxA(NULL, buffer, "错误", MB_OK);
+#else
+		fprintf(stderr, "%s\n", buffer);
+#endif
 
 		if(next) m_nIp = next->base_nIp;
 		RemoveScriptFromList(&CTheScripts::pActiveScripts);

@@ -5,7 +5,9 @@
 #define VANILLA_DEFINES
 #endif
 //CLEO支持
-#define VC_CLEO
+// aarch64 掌机移植：CLEO 子系统深度依赖 Windows API 与 32 位指针（CPed*/CVehicle* 强转 int32），
+// 在 aarch64 上无法编译且与中文静态字库显示无关，故关闭。如需 CLEO 需另行移植。
+// #define VC_CLEO
 
 enum Config {
 	NUMPLAYERS = 1,

@@ -900,9 +900,11 @@ void CTheScripts::Init()
 #endif
 	//添加cleo初始化
 	//  =====  =====
-	//ProcessCustomScripts(); 
+	//ProcessCustomScripts();
 	// ======================
+#ifdef VC_CLEO
 	LoadCustomScripts();
+#endif // VC_CLEO
 }
 
 void CTheScripts::RemoveScriptTextureDictionary()

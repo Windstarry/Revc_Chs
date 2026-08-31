@@ -369,3 +369,7 @@ codewarrior/Release/
 codewarrior/Debug/
 
 src/extras/GitSHA1.cpp
+
+# aarch64 交叉编译构建树（Docker portmaster-builder 产物，非源码）
+build_arm64/
+build_real/
