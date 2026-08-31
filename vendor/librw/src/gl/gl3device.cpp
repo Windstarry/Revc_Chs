@@ -1533,6 +1533,10 @@ static struct {
 	{ 0, 0, 0 },
 };
 
+/* SDL2 has no GlGlobals monitor fields (those are GLFW-only), so track the
+ * selected video display locally for the DEVICEGET/SETSUBSYSTEM requests. */
+static int sdl2CurrentMonitor = 0;
+
 static int
 startSDL2(void)
 {
@@ -1545,6 +1549,8 @@ startSDL2(void)
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, glGlobals.numSamples);
 
 	int i;
+	win = nil;
+	ctx = nil;
 	for(i = 0; profiles[i].gl; i++){
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profiles[i].gl);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, profiles[i].major);
@@ -1559,17 +1565,31 @@ startSDL2(void)
 			if (win)
 				SDL_SetWindowDisplayMode(win, NULL);
 		}
-		if(win){
+		if(win == nil)
+			continue;
+
+		// A window with SDL_WINDOW_OPENGL can be created successfully even when the
+		// requested profile is not supported at all: mobile GPUs such as Mali or
+		// Adreno only expose GLES contexts and let eglCreateContext fail later with
+		// EGL_BAD_ATTRIBUTE. The context therefore has to be created inside this
+		// loop as well, otherwise we lock onto a desktop GL profile that can never
+		// produce a usable context and every following GL call has no context.
+		ctx = SDL_GL_CreateContext(win);
+		if(ctx){
 			gl3Caps.gles = profiles[i].gl == SDL_GL_CONTEXT_PROFILE_ES;
 			gl3Caps.glversion = profiles[i].major*10 + profiles[i].minor;
+			printf("Using %s %d.%d context\n",
+				profiles[i].gl == SDL_GL_CONTEXT_PROFILE_ES ? "OpenGL ES" : "OpenGL",
+				profiles[i].major, profiles[i].minor);
 			break;
 		}
+		SDL_DestroyWindow(win);
+		win = nil;
 	}
-	if(win == nil){
+	if(win == nil || ctx == nil){
 		RWERROR((ERR_GENERAL, SDL_GetError()));
 		return 0;
 	}
-	ctx = SDL_GL_CreateContext(win);
 
 	if (!((gl3Caps.gles ? gladLoadGLES2Loader : gladLoadGLLoader) ((GLADloadproc) SDL_GL_GetProcAddress, gl3Caps.glversion)) ) {
 		RWERROR((ERR_GENERAL, "gladLoadGLLoader failed"));
@@ -1911,7 +1931,37 @@ deviceSystemSDL2(DeviceReq req, void *arg, int32 n)
 	case DEVICEFINALIZE:
 		return finalizeOpenGL();
 
-	// TODO: implement subsystems
+	// SDL2 subsystem handling: a "subsystem" maps to a video display.
+	// Without this, RwEngineGetNumSubSystems() fell through to the default
+	// branch and returned 0, so psSelectDevice() bailed out at the very
+	// first check and reVC never reached GL context creation.
+	case DEVICEGETNUMSUBSYSTEMS:
+		{
+			int nmon = SDL_GetNumVideoDisplays();
+			return nmon > 0 ? nmon : 1;
+		}
+
+	case DEVICEGETCURRENTSUBSYSTEM:
+		return sdl2CurrentMonitor;
+
+	case DEVICESETSUBSYSTEM:
+		{
+			int nmon = SDL_GetNumVideoDisplays();
+			if(n < 0 || (nmon > 0 && n >= nmon))
+				return 0;
+			sdl2CurrentMonitor = n;
+			return 1;
+		}
+
+	case DEVICEGETSUBSSYSTEMINFO:
+		{
+			const char *name = SDL_GetDisplayName(n);
+			strncpy(((SubSystemInfo*)arg)->name,
+				name ? name : "SDL2 Display",
+				sizeof(SubSystemInfo::name) - 1);
+			((SubSystemInfo*)arg)->name[sizeof(SubSystemInfo::name) - 1] = '\0';
+		}
+		return 1;
 
 	case DEVICEGETNUMVIDEOMODES:
 		return glGlobals.numModes;
